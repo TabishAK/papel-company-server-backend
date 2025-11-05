@@ -1,0 +1,56 @@
+name: Deploy dev to EC2
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Install dependencies in EC2 via SSH
+      - name: Install Dependencies in EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/ubuntu/papel-super-admin-backend
+            # Set Git remote with PAT
+            git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Geeksofkolachi/papel-super-admin-backend.git
+            # Pull latest code
+            git pull origin dev
+            # Install dependencies
+            yarn
+        continue-on-error: false
+
+      # Build the application in EC2 via SSH
+      - name: Build the Application in EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/ubuntu/papel-super-admin-backend
+            NODE_OPTIONS="--max-old-space-size=4096" yarn build
+        continue-on-error: false
+
+      # Restart or Start the App using PM2 in EC2 via SSH
+      - name: Restart or Start the App in EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            pm2 restart Super-Admin-Backend || pm2 start "NODE_ENV=prod yarn start:prod" --name Super-Admin-Backend
+            # Save the PM2 process list
+            pm2 save
