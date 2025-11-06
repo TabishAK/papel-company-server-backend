@@ -3,7 +3,6 @@ import * as mime from 'mime';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG } from 'src/constants/config.constant';
-
 import {
   S3Client,
   PutObjectCommand,
@@ -11,7 +10,7 @@ import {
   HeadBucketCommand,
   CreateBucketCommand,
   BucketLocationConstraint,
-  PutBucketPolicyCommand,
+  // PutBucketPolicyCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { SerializeHttpResponse } from 'src/utils/serializer.util';
@@ -83,33 +82,33 @@ export class MediaService implements OnModuleInit {
 
   async onModuleInit() {
     await this.ensureBucketExists();
-    await this.initializeBucketPolicy();
+    // await this.initializeBucketPolicy();
   }
 
-  private async initializeBucketPolicy() {
-    try {
-      const bucketPolicy = {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Effect: 'Allow',
-            Principal: { AWS: ['*'] },
-            Action: ['s3:GetObject'],
-            Resource: [`arn:aws:s3:::${this.bucketName}/*`],
-          },
-        ],
-      };
+  // private async initializeBucketPolicy() {
+  //   try {
+  //     const bucketPolicy = {
+  //       Version: '2012-10-17',
+  //       Statement: [
+  //         {
+  //           Effect: 'Allow',
+  //           Principal: { AWS: ['*'] },
+  //           Action: ['s3:GetObject'],
+  //           Resource: [`arn:aws:s3:::${this.bucketName}/*`],
+  //         },
+  //       ],
+  //     };
 
-      const command = new PutBucketPolicyCommand({
-        Bucket: this.bucketName,
-        Policy: JSON.stringify(bucketPolicy),
-      });
+  //     const command = new PutBucketPolicyCommand({
+  //       Bucket: this.bucketName,
+  //       Policy: JSON.stringify(bucketPolicy),
+  //     });
 
-      await this.s3Client.send(command);
-    } catch (error) {
-      this.logger.warn(`Could not set bucket policy: ${error.message}`);
-    }
-  }
+  //     await this.s3Client.send(command);
+  //   } catch (error) {
+  //     this.logger.warn(`Could not set bucket policy: ${error.message}`);
+  //   }
+  // }
 
   /** Ensure bucket exists, create if missing */
   private async ensureBucketExists(): Promise<void> {

@@ -22,15 +22,15 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  if (process.env.NODE_ENV !== 'production') {
-    SwaggerModule.setup('docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
-        docExpansion: 'none',
-        tagsSorter: 'alpha',
-      },
-    });
-  }
+  // if (process.env.NODE_ENV !== 'production') {
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'none',
+      tagsSorter: 'alpha',
+    },
+  });
+  // }
 
   app.useGlobalPipes(
     new CustomValidationPipe({
