@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { getSystemDatabaseConfig } from './config/db_config';
 import { CONFIG } from './constants/config.constant';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { CONFIG } from './constants/config.constant';
       cache: true,
       envFilePath: `.env.${process.env[CONFIG.NODE_ENV]}`,
     }),
+    MediaModule,
     TypeOrmModule.forRoot(getSystemDatabaseConfig()),
   ],
   controllers: [AppController],
