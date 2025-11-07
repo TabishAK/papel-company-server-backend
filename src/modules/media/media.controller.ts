@@ -2,12 +2,13 @@ import {
   Controller,
   Post,
   Body,
-  UploadedFile,
-  UseInterceptors,
-  ParseFilePipe,
-  MaxFileSizeValidator,
   Delete,
   Query,
+  Get,
+  UploadedFile,
+  ParseFilePipe,
+  UseInterceptors,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { UploadFileDto } from './dto/upload-file.dto';
@@ -50,6 +51,13 @@ export class MediaController {
   @ApiResponse({ status: 200, description: 'Pre-signed URLs generated successfully' })
   async getPreSignedUrls(@Body() presignedUrlsDto: PresignedUrlsDto) {
     return this.mediaService.getPreSignedUrls(presignedUrlsDto.files);
+  }
+
+  @Get('health-check')
+  @ApiOperation({ summary: 'Check the health of the media service' })
+  @ApiResponse({ status: 200, description: 'Media service is healthy' })
+  async healthCheck() {
+    return { status: 'healthy' };
   }
 
   //   @Post('file-url')
