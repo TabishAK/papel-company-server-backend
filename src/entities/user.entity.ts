@@ -1,13 +1,15 @@
-import { TABLE_NAME } from 'src/constants/db.constant';
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Entity(TABLE_NAME.USERS)
+import { USER_ROLE } from 'src/constants/user.constant';
+import { TABLE_NAME } from 'src/constants/table-name.constant';
+
+@Entity(TABLE_NAME.USER)
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -24,8 +26,35 @@ export class User {
   @Column({ default: false })
   isVerified: boolean;
 
+  @Column({ type: 'enum', enum: USER_ROLE })
+  role: USER_ROLE;
+
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isPasswordResetDone: boolean;
+
+  @Column({ length: 255, nullable: true })
+  fullName: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  address: string;
+
+  @Column({ type: 'varchar', length: 20 })
+  contactNumber: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  companyId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  departmentId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  sectionId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  temporaryPassword: string;
 
   @CreateDateColumn()
   createdAt: Date;

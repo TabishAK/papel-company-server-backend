@@ -2,7 +2,6 @@ export enum PAYMENT_ERRORS {
   PAYMENT_PLAN_NOT_FOUND = 'Payment plan not found.',
   CUSTOMER_CREATION_FAILED = 'Failed to create or find customer.',
   CHECKOUT_SESSION_CREATION_FAILED = 'Failed to create checkout session.',
-  TENANT_NOT_FOUND = 'Tenant not found.',
   WEBHOOK_SIGNATURE_VERIFICATION_FAILED = 'Webhook signature verification failed.',
   SUBSCRIPTION_NOT_FOUND = 'Subscription not found.',
   CHECKOUT_SESSION_NOT_FOUND = 'Checkout session not found.',

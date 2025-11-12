@@ -11,7 +11,7 @@ if (!process.env[CONFIG.NODE_ENV]) {
 const envFile = process.env[CONFIG.NODE_ENV] === 'production' ? '.env.prod' : '.env.dev';
 dotenv.config({ path: envFile });
 
-export const getSystemDatabaseConfig = (): DataSourceOptions => {
+export const getDatabaseConfig = (): DataSourceOptions => {
   const config: DataSourceOptions = {
     type: 'mysql',
     name: 'company_database',
@@ -32,6 +32,6 @@ export const getSystemDatabaseConfig = (): DataSourceOptions => {
   return config;
 };
 
-const dataSource = new DataSource({ ...getSystemDatabaseConfig() });
+const dataSource = new DataSource({ ...getDatabaseConfig() });
 
 export default dataSource;

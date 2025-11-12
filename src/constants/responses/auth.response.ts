@@ -23,5 +23,4 @@ export enum AUTH_SUCCESS {
   SIGNUP_VERIFICATION = 'OTP verified. You can now set your password.',
   ME = 'User details fetched successfully.',
   REGISTER_SUPER_ADMIN = 'Super admin has been registered successfully.',
-  GENERATE_TENANT_API_KEY = 'Tenant API key has been generated successfully.',
 }

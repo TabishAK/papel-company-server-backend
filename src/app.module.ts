@@ -3,9 +3,11 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
-import { getSystemDatabaseConfig } from './config/db_config';
+import { getDatabaseConfig } from './config/db_config';
 import { CONFIG } from './constants/config.constant';
 import { MediaModule } from './modules/media/media.module';
+import { AuthController } from './modules/auth/auth.controller';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -15,7 +17,8 @@ import { MediaModule } from './modules/media/media.module';
       envFilePath: `.env.${process.env[CONFIG.NODE_ENV]}`,
     }),
     MediaModule,
-    TypeOrmModule.forRoot(getSystemDatabaseConfig()),
+    AuthModule,
+    TypeOrmModule.forRoot(getDatabaseConfig()),
   ],
   controllers: [AppController],
   providers: [AppService],

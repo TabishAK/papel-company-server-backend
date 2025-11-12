@@ -16,10 +16,7 @@ export const verifyPassword = async (
 
 export const verifyToken = async (token: string) => {
   try {
-    return jwt.verify(
-      token,
-      process.env.JWT_SECRET as string,
-    ) as jwt.JwtPayload;
+    return jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
   } catch (error) {
     return undefined;
   }

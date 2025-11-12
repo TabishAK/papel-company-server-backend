@@ -1,0 +1,9 @@
+export enum OTP_TYPE {
+  FORGOT_PASSWORD_OTP = 'FORGOT_PASSWORD_OTP',
+}
+
+export enum OTP_STATUS {
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  EXPIRED = 'EXPIRED',
+}
