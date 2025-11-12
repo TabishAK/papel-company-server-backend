@@ -23,9 +23,6 @@ export class User {
   @Column({ nullable: true, length: 500 })
   profilePicture: string;
 
-  @Column({ default: false })
-  isVerified: boolean;
-
   @Column({ type: 'enum', enum: USER_ROLE })
   role: USER_ROLE;
 
@@ -41,7 +38,10 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   address: string;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'int', nullable: true })
+  securityLevel: number;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
   contactNumber: string;
 
   @Column({ type: 'varchar', nullable: true })

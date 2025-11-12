@@ -70,6 +70,7 @@ export class AuthService {
           departmentId: response.data.departmentId,
           sectionId: response.data.sectionId,
           temporaryPassword: response.data.temporaryPassword,
+          securityLevel: response.data.securityLevel,
         });
 
         const resetPasswordToken = this.generateToken(

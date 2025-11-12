@@ -9,4 +9,5 @@ export class Employee {
   departmentId: string;
   sectionId: string;
   temporaryPassword: string;
+  securityLevel: number;
 }

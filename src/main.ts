@@ -12,7 +12,7 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('Papel Super Admin')
+    .setTitle('Papel Company Server')
     .setDescription('Manage every document in one place')
     .setVersion('1.0')
     .addBearerAuth()
