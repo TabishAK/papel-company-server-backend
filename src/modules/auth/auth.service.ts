@@ -47,8 +47,6 @@ export class AuthService {
   async login({ email, password }: LogInDto) {
     const user = await this.userRepository.findOne({ where: { email } });
 
-    const passwordPolicy = await this.passwordPolicyService.getPasswordPolicy();
-
     if (!user) {
       const baseUrl = getTenantEndpoint();
       const endpoint = `${baseUrl}/employees/verify-with-temporary-login`;
@@ -96,6 +94,8 @@ export class AuthService {
 
     const lockoutCheck = await this.passwordPolicyValidationService.checkAccountLockout(user.id);
 
+    console.log('lockoutCheck', lockoutCheck);
+
     if (lockoutCheck.locked) {
       return SerializeHttpResponse(
         false,
@@ -106,9 +106,9 @@ export class AuthService {
 
     if (user.password) {
       const isPasswordValid = await verifyPassword(password, user?.password ?? '');
-      await this.passwordPolicyValidationService.recordFailedLoginAttempt(user.id);
 
       if (!isPasswordValid) {
+        await this.passwordPolicyValidationService.recordFailedLoginAttempt(user.id);
         return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'Invalid email or password');
       }
     }

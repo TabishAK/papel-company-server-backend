@@ -199,6 +199,8 @@ export class PasswordPolicyValidationService {
   }> {
     const policy = await this.passwordPolicyService.getPasswordPolicy();
 
+    console.log('policy', policy);
+
     if (!policy || !policy.enableLockoutPolicy) {
       return { locked: false };
     }
@@ -211,6 +213,7 @@ export class PasswordPolicyValidationService {
       return { locked: false };
     }
 
+    // Check if account is currently locked
     if (lockout.lockedUntil && new Date() < lockout.lockedUntil) {
       const minutesRemaining = Math.ceil(
         (lockout.lockedUntil.getTime() - Date.now()) / (1000 * 60),
@@ -222,6 +225,8 @@ export class PasswordPolicyValidationService {
       };
     }
 
+    // If lockout period has expired, allow login attempt but keep lockoutCount
+    // The lockoutCount will only be reset on successful login
     if (lockout.lockedUntil && new Date() >= lockout.lockedUntil) {
       await this.userLockoutRepository.update(lockout.id, {
         failedAttempts: 0,
@@ -240,35 +245,44 @@ export class PasswordPolicyValidationService {
       return;
     }
 
-    let lockout = await this.userLockoutRepository.findOne({
-      where: { userId },
-    });
+    let lockout = await this.userLockoutRepository.findOne({ where: { userId } });
 
     if (!lockout) {
       lockout = this.userLockoutRepository.create({
         userId,
         failedAttempts: 0,
+        lockoutCount: 0,
       });
     }
 
     const now = new Date();
-    const lastAttemptTime = lockout.lastFailedAttemptAt
-      ? new Date(lockout.lastFailedAttemptAt)
-      : null;
 
-    if (
-      lastAttemptTime &&
-      policy.maxLockoutThresholdAge > 0 &&
-      (now.getTime() - lastAttemptTime.getTime()) / (1000 * 60) >= policy.maxLockoutThresholdAge
-    ) {
-      lockout.failedAttempts = 0;
+    // Check if resetLockoutThreshold time has passed since last failed attempt
+    if (lockout.lastFailedAttemptAt && policy.resetLockoutThreshold > 0) {
+      const minutesSinceLastAttempt = Math.floor(
+        (now.getTime() - lockout.lastFailedAttemptAt.getTime()) / (1000 * 60),
+      );
+
+      // Reset failed attempts if threshold time has passed
+      if (minutesSinceLastAttempt >= policy.resetLockoutThreshold) {
+        lockout.failedAttempts = 0;
+      }
     }
 
     lockout.failedAttempts += 1;
     lockout.lastFailedAttemptAt = now;
 
-    if (lockout.failedAttempts >= policy.maxLockoutThreshold) {
-      lockout.lockedUntil = new Date(now.getTime() + policy.lockoutDuration * 60 * 1000);
+    // Check if user should be locked out
+    if (lockout.failedAttempts >= policy.maxLockoutThresholdAge) {
+      // Increment lockout count for progressive lockout duration
+      lockout.lockoutCount += 1;
+
+      // Calculate progressive lockout duration: lockoutDuration * lockoutCount
+      const progressiveDuration = policy.lockoutDuration * lockout.lockoutCount;
+      lockout.lockedUntil = new Date(now.getTime() + progressiveDuration * 60 * 1000);
+
+      // Reset failed attempts after locking
+      lockout.failedAttempts = 0;
     }
 
     await this.userLockoutRepository.save(lockout);
@@ -282,6 +296,7 @@ export class PasswordPolicyValidationService {
     if (lockout) {
       await this.userLockoutRepository.update(lockout.id, {
         failedAttempts: 0,
+        lockoutCount: 0,
         lockedUntil: null,
         lastFailedAttemptAt: null,
       });

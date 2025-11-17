@@ -12,7 +12,8 @@ export interface PasswordPolicy {
   enableLockoutPolicy: boolean;
   lockoutDuration: number;
   maxLockoutThresholdAge: number;
-  maxLockoutThreshold: number;
+  resetLockoutThreshold: number;
+  // maxLockoutThreshold: number;
   createdAt: Date;
   updatedAt: Date;
 }

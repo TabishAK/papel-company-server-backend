@@ -21,6 +21,9 @@ export class UserLockout {
   @Column({ type: 'int', default: 0 })
   failedAttempts: number;
 
+  @Column({ type: 'int', default: 0 })
+  lockoutCount: number;
+
   @Column({ type: 'datetime', nullable: true })
   lockedUntil: Date | null;
 
