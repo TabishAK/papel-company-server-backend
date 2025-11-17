@@ -1,14 +1,15 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { OTP_ERROR } from 'src/constants/responses/otp.response';
 import { Otp } from 'src/entities/otp.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DB_NAME } from 'src/constants/db.constant';
+import { OTP_ERROR } from 'src/constants/responses/otp.response';
 import { OTP_STATUS, OTP_TYPE } from 'src/constants/otp.constant';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class OtpService {
   constructor(
-    @InjectRepository(Otp, 'company_database')
+    @InjectRepository(Otp, DB_NAME)
     private readonly otpRepository: Repository<Otp>,
   ) {}
 

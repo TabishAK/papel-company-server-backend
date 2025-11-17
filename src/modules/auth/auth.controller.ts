@@ -13,6 +13,11 @@ import { VerifyOtpDto } from './dto/otp.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('/test')
+  test() {
+    return 'Hello World';
+  }
+
   @Post('/login')
   @ApiOperation({ summary: 'Login a Employee' })
   login(@Body() loginDto: LogInDto) {

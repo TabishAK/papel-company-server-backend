@@ -1,36 +1,41 @@
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Http } from 'src/utils/http.util';
+import { OtpService } from './otp.service';
 import { LogInDto } from './dto/signin.dto';
+import { VerifyOtpDto } from './dto/otp.dto';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/entities/user.entity';
+import { Employee } from 'src/types/employee.type';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHashPassword, verifyPassword, verifyToken } from 'src/utils/auth.util';
+import { DB_NAME } from 'src/constants/db.constant';
+import { OTP_TYPE } from 'src/constants/otp.constant';
+import { EmailService } from '../email/email.service';
 import { getTenantEndpoint } from 'src/utils/endpoint';
 import { CONFIG } from 'src/constants/config.constant';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { TOKEN_TYPES, TOKEN_VALIDITY } from 'src/constants/auth.constant';
 import { SerializeHttpResponse } from 'src/utils/serializer.util';
 import { getCompanySecretKeyHeader } from 'src/utils/company.util';
-import { Employee } from 'src/types/employee.type';
-import { ChangePasswordDto, ResetPasswordDto } from './dto/forgot-password.dto';
-import { OtpService } from './otp.service';
-import { OTP_TYPE } from 'src/constants/otp.constant';
-import { EmailService } from '../email/email.service';
 import { EMAIL_SUBJECT } from 'src/constants/responses/email.response';
-import { VerifyOtpDto } from './dto/otp.dto';
+import { TOKEN_TYPES, TOKEN_VALIDITY } from 'src/constants/auth.constant';
+import { ChangePasswordDto, ResetPasswordDto } from './dto/forgot-password.dto';
+import { PasswordPolicyService } from '../password-policy/password-policy.service';
+import { createHashPassword, verifyPassword, verifyToken } from 'src/utils/auth.util';
+import { PasswordPolicyValidationService } from '../password-policy/password-policy-validation.service';
 
 @Injectable()
 export class AuthService {
   private readonly tenantDomain: string;
 
   constructor(
-    @InjectRepository(User, 'company_database')
+    @InjectRepository(User, DB_NAME)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly otpService: OtpService,
     private readonly emailService: EmailService,
+    private readonly passwordPolicyValidationService: PasswordPolicyValidationService,
+    private readonly passwordPolicyService: PasswordPolicyService,
   ) {}
 
   generateToken(id: string, expiresIn: string, tokenType: TOKEN_TYPES, tokenPayload = {}) {
@@ -43,6 +48,9 @@ export class AuthService {
     const user = await this.userRepository.findOne({ where: { email } });
 
     console.log('user already exists in the database', user);
+
+    const passwordPolicy = await this.passwordPolicyService.getPasswordPolicy();
+    console.log('passwordPolicy', passwordPolicy);
 
     if (!user) {
       const baseUrl = getTenantEndpoint();
@@ -89,6 +97,26 @@ export class AuthService {
       }
     }
 
+    const lockoutCheck = await this.passwordPolicyValidationService.checkAccountLockout(user.id);
+    console.log('lockoutCheck', lockoutCheck);
+
+    if (lockoutCheck.locked) {
+      return SerializeHttpResponse(
+        false,
+        HttpStatus.FORBIDDEN,
+        lockoutCheck.message || 'Account is locked',
+      );
+    }
+
+    if (user.password) {
+      const isPasswordValid = await verifyPassword(password, user?.password ?? '');
+      await this.passwordPolicyValidationService.recordFailedLoginAttempt(user.id);
+
+      if (!isPasswordValid) {
+        return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'Invalid email or password');
+      }
+    }
+
     if (!user.isPasswordResetDone) {
       const resetPasswordToken = this.generateToken(
         user.id,
@@ -103,14 +131,54 @@ export class AuthService {
       );
     }
 
+    const passwordExpiryCheck = await this.passwordPolicyValidationService.checkMaximumPasswordAge(
+      user.id,
+    );
+
+    if (passwordExpiryCheck.expired) {
+      const resetPasswordToken = this.generateToken(
+        user.id,
+        TOKEN_VALIDITY.RESET_PASSWORD,
+        TOKEN_TYPES.RESET_PASSWORD,
+      );
+
+      return SerializeHttpResponse(
+        {
+          resetPasswordToken,
+          email: user.email,
+          isPasswordResetDone: false,
+          passwordExpired: true,
+        },
+        HttpStatus.OK,
+        'Your password has expired. Please reset it.',
+      );
+    }
+
     const isPasswordValid = await verifyPassword(password, user?.password ?? '');
 
     if (!isPasswordValid) {
+      await this.passwordPolicyValidationService.recordFailedLoginAttempt(user.id);
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'Invalid email or password');
     }
 
+    await this.passwordPolicyValidationService.resetFailedLoginAttempts(user.id);
+    console.log('failed login attempts reset');
+
+    const passwordWarning = await this.passwordPolicyValidationService.checkPasswordExpiryWarning(
+      user.id,
+    );
+
     const token = this.generateToken(user.id, TOKEN_VALIDITY.LOGIN, TOKEN_TYPES.LOGIN);
-    const payload = { token, id: user.id, email: user.email, isPasswordResetDone: true };
+    const payload = {
+      token,
+      id: user.id,
+      email: user.email,
+      isPasswordResetDone: true,
+      passwordWarning: passwordWarning.warning
+        ? { warning: true, daysUntilExpiry: passwordWarning.daysUntilExpiry }
+        : null,
+    };
+
     return SerializeHttpResponse(payload, HttpStatus.OK, 'Login successful');
   }
 
@@ -121,18 +189,67 @@ export class AuthService {
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'Invalid token');
     }
 
-    const user = await this.userRepository.findOne({ where: { id: tokenPayload.id } });
+    console.log('tokenPayload', tokenPayload);
+
+    const user = await this.userRepository.findOne({ where: { id: tokenPayload.sub } });
+
+    console.log('user', user);
 
     if (!user) {
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'User not found');
     }
 
+    const policy = await this.passwordPolicyService.getPasswordPolicy();
+
+    console.log('policy', policy);
+
+    if (policy && policy.enablePasswordPolicy) {
+      const strengthCheck = await this.passwordPolicyValidationService.validatePasswordStrength(
+        password,
+        policy,
+      );
+
+      console.log('strengthCheck', strengthCheck);
+
+      if (!strengthCheck.valid) {
+        return SerializeHttpResponse(
+          false,
+          HttpStatus.BAD_REQUEST,
+          strengthCheck.message || 'Password does not meet requirements',
+        );
+      }
+
+      const historyCheck = await this.passwordPolicyValidationService.checkPasswordHistory(
+        user.id,
+        password,
+        policy,
+      );
+
+      console.log('historyCheck', historyCheck);
+
+      if (!historyCheck.valid) {
+        return SerializeHttpResponse(
+          false,
+          HttpStatus.BAD_REQUEST,
+          historyCheck.message || 'Password cannot be reused',
+        );
+      }
+    }
+
     const hashedPassword = await createHashPassword(password);
+
+    console.log('user.id ===> ', user.id);
 
     await this.userRepository.update(user.id, {
       password: hashedPassword,
       isPasswordResetDone: true,
     });
+
+    console.log('<======== user updated ========> ');
+
+    if (policy && policy.enablePasswordPolicy) {
+      await this.passwordPolicyValidationService.savePasswordToHistory(user.id, hashedPassword);
+    }
 
     const newToken = this.generateToken(user.id, TOKEN_VALIDITY.LOGIN, TOKEN_TYPES.LOGIN);
     const payload = { token: newToken, id: user.id, email: user.email, isPasswordResetDone: true };
@@ -150,8 +267,57 @@ export class AuthService {
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'Invalid old password');
     }
 
+    const policy = await this.passwordPolicyService.getPasswordPolicy();
+
+    if (policy && policy.enablePasswordPolicy) {
+      const minAgeCheck = await this.passwordPolicyValidationService.checkMinimumPasswordAge(
+        user.id,
+        policy,
+      );
+
+      if (!minAgeCheck.valid) {
+        return SerializeHttpResponse(
+          false,
+          HttpStatus.BAD_REQUEST,
+          minAgeCheck.message || 'Password cannot be changed yet',
+        );
+      }
+
+      const strengthCheck = await this.passwordPolicyValidationService.validatePasswordStrength(
+        newPassword,
+        policy,
+      );
+
+      if (!strengthCheck.valid) {
+        return SerializeHttpResponse(
+          false,
+          HttpStatus.BAD_REQUEST,
+          strengthCheck.message || 'Password does not meet requirements',
+        );
+      }
+
+      const historyCheck = await this.passwordPolicyValidationService.checkPasswordHistory(
+        user.id,
+        newPassword,
+        policy,
+      );
+
+      if (!historyCheck.valid) {
+        return SerializeHttpResponse(
+          false,
+          HttpStatus.BAD_REQUEST,
+          historyCheck.message || 'Password cannot be reused',
+        );
+      }
+    }
+
     const hashedPassword = await createHashPassword(newPassword);
     await this.userRepository.update(user.id, { password: hashedPassword });
+
+    if (policy && policy.enablePasswordPolicy) {
+      await this.passwordPolicyValidationService.savePasswordToHistory(user.id, hashedPassword);
+    }
+
     return SerializeHttpResponse(true, HttpStatus.OK, 'Password changed successfully');
   }
 
@@ -161,7 +327,25 @@ export class AuthService {
     if (!user) {
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'User not found');
     }
-    return SerializeHttpResponse(user, HttpStatus.OK, 'User details fetched successfully');
+
+    const passwordWarning =
+      await this.passwordPolicyValidationService.checkPasswordExpiryWarning(id);
+
+    const passwordExpiryCheck =
+      await this.passwordPolicyValidationService.checkMaximumPasswordAge(id);
+
+    const response = {
+      ...user,
+      passwordWarning: passwordWarning.warning
+        ? {
+            warning: true,
+            daysUntilExpiry: passwordWarning.daysUntilExpiry,
+          }
+        : null,
+      passwordExpired: passwordExpiryCheck.expired || false,
+    };
+
+    return SerializeHttpResponse(response, HttpStatus.OK, 'User details fetched successfully');
   }
 
   async forgotPassword(email: string) {

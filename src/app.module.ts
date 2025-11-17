@@ -8,6 +8,8 @@ import { getDatabaseConfig } from './config/db_config';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { MediaModule } from './modules/media/media.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { PasswordPolicyModule } from './modules/password-policy/password-policy.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { MediaModule } from './modules/media/media.module';
     MediaModule,
     AuthModule,
     UserModule,
+    PasswordPolicyModule,
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot(getDatabaseConfig()),
   ],
   controllers: [AppController],

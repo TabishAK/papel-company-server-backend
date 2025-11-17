@@ -6,11 +6,12 @@ import { SerializeHttpResponse } from 'src/utils/serializer.util';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { MediaService } from '../media/media.service';
 import { SyncEmployeeDto } from './dto/sync-user.dto';
+import { DB_NAME } from 'src/constants/db.constant';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User, 'company_database')
+    @InjectRepository(User, DB_NAME)
     private readonly userRepository: Repository<User>,
     private readonly mediaService: MediaService,
   ) {}

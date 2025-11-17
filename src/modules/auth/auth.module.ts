@@ -6,13 +6,16 @@ import { Otp } from 'src/entities/otp.entity';
 import { User } from 'src/entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
+import { DB_NAME } from 'src/constants/db.constant';
 import { EmailService } from '../email/email.service';
 import { CONFIG } from 'src/constants/config.constant';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PasswordPolicyModule } from '../password-policy/password-policy.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Otp], 'company_database'),
+    PasswordPolicyModule,
+    TypeOrmModule.forFeature([User, Otp], DB_NAME),
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
