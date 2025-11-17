@@ -366,9 +366,7 @@ export class AuthService {
     let response;
     try {
       const url = getTenantEndpoint() + '/company/info';
-      response = await Http.get(getTenantEndpoint() + '/company/info', {
-        headers: { ...getCompanySecretKeyHeader() },
-      });
+      response = await Http.get(url, { headers: { ...getCompanySecretKeyHeader() } });
     } catch (error) {
       return SerializeHttpResponse(false, HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
