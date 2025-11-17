@@ -199,8 +199,6 @@ export class PasswordPolicyValidationService {
   }> {
     const policy = await this.passwordPolicyService.getPasswordPolicy();
 
-    console.log('policy', policy);
-
     if (!policy || !policy.enableLockoutPolicy) {
       return { locked: false };
     }

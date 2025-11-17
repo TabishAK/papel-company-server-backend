@@ -94,8 +94,6 @@ export class AuthService {
 
     const lockoutCheck = await this.passwordPolicyValidationService.checkAccountLockout(user.id);
 
-    console.log('lockoutCheck', lockoutCheck);
-
     if (lockoutCheck.locked) {
       return SerializeHttpResponse(
         false,
