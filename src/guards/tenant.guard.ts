@@ -24,8 +24,6 @@ export class TenantGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const apiKey = request.headers['x-api-key'] as string;
 
-    console.log('apiKey', apiKey);
-
     if (!apiKey) {
       return SerializeHttpResponse(null, HttpStatus.UNAUTHORIZED, 'Missing company credentials');
     }
@@ -34,8 +32,6 @@ export class TenantGuard implements CanActivate {
       if (apiKey !== this.apiKey) {
         return SerializeHttpResponse(null, HttpStatus.UNAUTHORIZED, 'Invalid company credentials');
       }
-
-      console.log('apiKey is valid');
 
       return true;
     } catch (error: unknown) {

@@ -47,10 +47,7 @@ export class AuthService {
   async login({ email, password }: LogInDto) {
     const user = await this.userRepository.findOne({ where: { email } });
 
-    console.log('user already exists in the database', user);
-
     const passwordPolicy = await this.passwordPolicyService.getPasswordPolicy();
-    console.log('passwordPolicy', passwordPolicy);
 
     if (!user) {
       const baseUrl = getTenantEndpoint();
@@ -98,7 +95,6 @@ export class AuthService {
     }
 
     const lockoutCheck = await this.passwordPolicyValidationService.checkAccountLockout(user.id);
-    console.log('lockoutCheck', lockoutCheck);
 
     if (lockoutCheck.locked) {
       return SerializeHttpResponse(
@@ -162,7 +158,6 @@ export class AuthService {
     }
 
     await this.passwordPolicyValidationService.resetFailedLoginAttempts(user.id);
-    console.log('failed login attempts reset');
 
     const passwordWarning = await this.passwordPolicyValidationService.checkPasswordExpiryWarning(
       user.id,
@@ -189,11 +184,7 @@ export class AuthService {
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'Invalid token');
     }
 
-    console.log('tokenPayload', tokenPayload);
-
     const user = await this.userRepository.findOne({ where: { id: tokenPayload.sub } });
-
-    console.log('user', user);
 
     if (!user) {
       return SerializeHttpResponse(false, HttpStatus.UNAUTHORIZED, 'User not found');
@@ -201,15 +192,11 @@ export class AuthService {
 
     const policy = await this.passwordPolicyService.getPasswordPolicy();
 
-    console.log('policy', policy);
-
     if (policy && policy.enablePasswordPolicy) {
       const strengthCheck = await this.passwordPolicyValidationService.validatePasswordStrength(
         password,
         policy,
       );
-
-      console.log('strengthCheck', strengthCheck);
 
       if (!strengthCheck.valid) {
         return SerializeHttpResponse(
@@ -225,8 +212,6 @@ export class AuthService {
         policy,
       );
 
-      console.log('historyCheck', historyCheck);
-
       if (!historyCheck.valid) {
         return SerializeHttpResponse(
           false,
@@ -238,14 +223,10 @@ export class AuthService {
 
     const hashedPassword = await createHashPassword(password);
 
-    console.log('user.id ===> ', user.id);
-
     await this.userRepository.update(user.id, {
       password: hashedPassword,
       isPasswordResetDone: true,
     });
-
-    console.log('<======== user updated ========> ');
 
     if (policy && policy.enablePasswordPolicy) {
       await this.passwordPolicyValidationService.savePasswordToHistory(user.id, hashedPassword);
@@ -387,16 +368,12 @@ export class AuthService {
     let response;
     try {
       const url = getTenantEndpoint() + '/company/info';
-      console.log('url', url);
       response = await Http.get(getTenantEndpoint() + '/company/info', {
         headers: { ...getCompanySecretKeyHeader() },
       });
     } catch (error) {
-      console.log('error', error);
       return SerializeHttpResponse(false, HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
-
-    console.log('company info', response.data);
 
     return SerializeHttpResponse(response.data, HttpStatus.OK, 'Company info fetched successfully');
   }

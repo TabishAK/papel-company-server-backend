@@ -67,7 +67,6 @@ export class UserService {
   }
 
   async syncEmployee(syncEmployeeDto: SyncEmployeeDto) {
-    console.log('syncEmployeeDto', syncEmployeeDto);
     const user = await this.userRepository.findOne({ where: { id: syncEmployeeDto.id } });
 
     if (!user) {
